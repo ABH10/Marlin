@@ -26,6 +26,9 @@
  * Test configuration values for errors at compile-time.
  */
 
+#ifndef _SANITYCHECK_H_
+#define _SANITYCHECK_H_
+
 /**
  * Require gcc 4.7 or newer (first included with Arduino 1.6.8) for C++11 features.
  */
@@ -102,26 +105,34 @@
   #error "FILAMENTCHANGEENABLE is now ADVANCED_PAUSE_FEATURE. Please update your configuration."
 #elif ENABLED(FILAMENT_CHANGE_FEATURE)
   #error "FILAMENT_CHANGE_FEATURE is now ADVANCED_PAUSE_FEATURE. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_X_POS)
-  #error "FILAMENT_CHANGE_X_POS is now PAUSE_PARK_X_POS. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_Y_POS)
-  #error "FILAMENT_CHANGE_Y_POS is now PAUSE_PARK_Y_POS. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_Z_ADD)
-  #error "FILAMENT_CHANGE_Z_ADD is now PAUSE_PARK_Z_ADD. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_XY_FEEDRATE)
-  #error "FILAMENT_CHANGE_XY_FEEDRATE is now PAUSE_PARK_XY_FEEDRATE. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_Z_FEEDRATE)
-  #error "FILAMENT_CHANGE_Z_FEEDRATE is now PAUSE_PARK_Z_FEEDRATE. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_RETRACT_FEEDRATE)
+#elif defined(FILAMENT_CHANGE_X_POS) || defined(FILAMENT_CHANGE_Y_POS)
+  #error "FILAMENT_CHANGE_[XY]_POS is now set with NOZZLE_PARK_POINT. Please update your configuration."
+#elif defined(FILAMENT_CHANGE_Z_ADD)
+  #error "FILAMENT_CHANGE_Z_ADD is now set with NOZZLE_PARK_POINT. Please update your configuration."
+#elif defined(FILAMENT_CHANGE_XY_FEEDRATE)
+  #error "FILAMENT_CHANGE_XY_FEEDRATE is now NOZZLE_PARK_XY_FEEDRATE. Please update your configuration."
+#elif defined(FILAMENT_CHANGE_Z_FEEDRATE)
+  #error "FILAMENT_CHANGE_Z_FEEDRATE is now NOZZLE_PARK_Z_FEEDRATE. Please update your configuration."
+#elif defined(PAUSE_PARK_X_POS) || defined(PAUSE_PARK_Y_POS)
+  #error "PAUSE_PARK_[XY]_POS is now set with NOZZLE_PARK_POINT. Please update your configuration."
+#elif defined(PAUSE_PARK_Z_ADD)
+  #error "PAUSE_PARK_Z_ADD is now set with NOZZLE_PARK_POINT. Please update your configuration."
+#elif defined(PAUSE_PARK_XY_FEEDRATE)
+  #error "PAUSE_PARK_XY_FEEDRATE is now NOZZLE_PARK_XY_FEEDRATE. Please update your configuration."
+#elif defined(PAUSE_PARK_Z_FEEDRATE)
+  #error "PAUSE_PARK_Z_FEEDRATE is now NOZZLE_PARK_Z_FEEDRATE. Please update your configuration."
+#elif defined(FILAMENT_CHANGE_RETRACT_FEEDRATE)
   #error "FILAMENT_CHANGE_RETRACT_FEEDRATE is now PAUSE_PARK_RETRACT_FEEDRATE. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_RETRACT_LENGTH)
+#elif defined(FILAMENT_CHANGE_RETRACT_LENGTH)
   #error "FILAMENT_CHANGE_RETRACT_LENGTH is now PAUSE_PARK_RETRACT_LENGTH. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_EXTRUDE_FEEDRATE)
+#elif defined(FILAMENT_CHANGE_EXTRUDE_FEEDRATE)
   #error "FILAMENT_CHANGE_EXTRUDE_FEEDRATE is now ADVANCED_PAUSE_EXTRUDE_FEEDRATE. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_EXTRUDE_LENGTH)
+#elif defined(FILAMENT_CHANGE_EXTRUDE_LENGTH)
   #error "FILAMENT_CHANGE_EXTRUDE_LENGTH is now ADVANCED_PAUSE_EXTRUDE_LENGTH. Please update your configuration."
-#elif ENABLED(FILAMENT_CHANGE_NOZZLE_TIMEOUT)
+#elif defined(FILAMENT_CHANGE_NOZZLE_TIMEOUT)
   #error "FILAMENT_CHANGE_NOZZLE_TIMEOUT is now PAUSE_PARK_NOZZLE_TIMEOUT. Please update your configuration."
+#elif defined(FILAMENT_CHANGE_NUMBER_OF_ALERT_BEEPS)
+  #error "FILAMENT_CHANGE_NUMBER_OF_ALERT_BEEPS is now FILAMENT_CHANGE_ALERT_BEEPS. Please update your configuration."
 #elif ENABLED(FILAMENT_CHANGE_NO_STEPPER_TIMEOUT)
   #error "FILAMENT_CHANGE_NO_STEPPER_TIMEOUT is now PAUSE_PARK_NO_STEPPER_TIMEOUT. Please update your configuration."
 #elif defined(PLA_PREHEAT_HOTEND_TEMP)
@@ -226,6 +237,10 @@
   #error "K1 is now PID_K1. Please update your configuration."
 #elif defined(PROBE_DOUBLE_TOUCH)
   #error "PROBE_DOUBLE_TOUCH is now MULTIPLE_PROBING. Please update your configuration."
+#elif defined(ANET_KEYPAD_LCD)
+  #error "ANET_KEYPAD_LCD is now ZONESTAR_LCD. Please update your configuration."
+#elif defined(MEASURED_LOWER_LIMIT) || defined(MEASURED_UPPER_LIMIT)
+  #error "MEASURED_(UPPER|LOWER)_LIMIT is now FILWIDTH_ERROR_MARGIN. Please update your configuration."
 #endif
 
 /**
@@ -252,7 +267,15 @@
 /**
  * Serial
  */
-#if defined(USBCON) && ENABLED(SERIAL_XON_XOFF)
+#ifndef USBCON
+  #if ENABLED(SERIAL_XON_XOFF) && RX_BUFFER_SIZE < 1024
+    #error "SERIAL_XON_XOFF requires RX_BUFFER_SIZE >= 1024 for reliable transfers without drops."
+  #elif RX_BUFFER_SIZE && (RX_BUFFER_SIZE < 2 || !IS_POWER_OF_2(RX_BUFFER_SIZE))
+    #error "RX_BUFFER_SIZE must be a power of 2 greater than 1."
+  #elif TX_BUFFER_SIZE && (TX_BUFFER_SIZE < 2 || TX_BUFFER_SIZE > 256 || !IS_POWER_OF_2(TX_BUFFER_SIZE))
+    #error "TX_BUFFER_SIZE must be 0, a power of 2 greater than 1, and no greater than 256."
+  #endif
+#elif ENABLED(SERIAL_XON_XOFF)
   #error "SERIAL_XON_XOFF is not supported on USB-native AVR devices."
 #endif
 
@@ -353,9 +376,7 @@ static_assert(X_MAX_LENGTH >= X_BED_SIZE && Y_MAX_LENGTH >= Y_BED_SIZE,
  * Babystepping
  */
 #if ENABLED(BABYSTEPPING)
-  #if DISABLED(ULTRA_LCD) && DISABLED(I2C_POSITION_ENCODERS)
-    #error "BABYSTEPPING requires an LCD controller."
-  #elif ENABLED(SCARA)
+  #if ENABLED(SCARA)
     #error "BABYSTEPPING is not implemented for SCARA yet."
   #elif ENABLED(DELTA) && ENABLED(BABYSTEP_XY)
     #error "BABYSTEPPING only implemented for Z axis on deltabots."
@@ -387,14 +408,20 @@ static_assert(X_MAX_LENGTH >= X_BED_SIZE && Y_MAX_LENGTH >= Y_BED_SIZE,
  * Advanced Pause
  */
 #if ENABLED(ADVANCED_PAUSE_FEATURE)
-  #if DISABLED(NEWPANEL)
-    #error "ADVANCED_PAUSE_FEATURE currently requires an LCD controller."
+  #if !HAS_RESUME_CONTINUE
+    #error "ADVANCED_PAUSE_FEATURE currently requires an LCD controller or EMERGENCY_PARSER."
   #elif ENABLED(EXTRUDER_RUNOUT_PREVENT)
     #error "EXTRUDER_RUNOUT_PREVENT is incompatible with ADVANCED_PAUSE_FEATURE."
   #elif ENABLED(PARK_HEAD_ON_PAUSE) && DISABLED(SDSUPPORT) && DISABLED(NEWPANEL) && DISABLED(EMERGENCY_PARSER)
     #error "PARK_HEAD_ON_PAUSE requires SDSUPPORT, EMERGENCY_PARSER, or an LCD controller."
   #elif ENABLED(HOME_BEFORE_FILAMENT_CHANGE) && DISABLED(PAUSE_PARK_NO_STEPPER_TIMEOUT)
-    #error "HOME_BEFORE_FILAMENT_CHANGE requires PAUSE_PARK_NO_STEPPER_TIMEOUT"
+    #error "HOME_BEFORE_FILAMENT_CHANGE requires PAUSE_PARK_NO_STEPPER_TIMEOUT."
+  #elif DISABLED(NOZZLE_PARK_FEATURE)
+    #error "ADVANCED_PAUSE_FEATURE requires NOZZLE_PARK_FEATURE."
+  #elif ENABLED(PREVENT_LENGTHY_EXTRUDE) && FILAMENT_CHANGE_UNLOAD_LENGTH > EXTRUDE_MAXLENGTH
+    #error "FILAMENT_CHANGE_UNLOAD_LENGTH must be less than or equal to EXTRUDE_MAXLENGTH."
+  #elif ENABLED(PREVENT_LENGTHY_EXTRUDE) && FILAMENT_CHANGE_LOAD_LENGTH > EXTRUDE_MAXLENGTH
+    #error "FILAMENT_CHANGE_LOAD_LENGTH must be less than or equal to EXTRUDE_MAXLENGTH."
   #endif
 #endif
 
@@ -433,8 +460,6 @@ static_assert(X_MAX_LENGTH >= X_BED_SIZE && Y_MAX_LENGTH >= Y_BED_SIZE,
  */
 #ifdef SNMM
   #error "SNMM is now MK2_MULTIPLEXER. Please update your configuration."
-#elif ENABLED(MK2_MULTIPLEXER) && DISABLED(ADVANCED_PAUSE_FEATURE)
-  #error "ADVANCED_PAUSE_FEATURE is required with MK2_MULTIPLEXER."
 #endif
 
 /**
@@ -476,6 +501,10 @@ static_assert(X_MAX_LENGTH >= X_BED_SIZE && Y_MAX_LENGTH >= Y_BED_SIZE,
   #elif ENABLED(LIN_ADVANCE)
     #error "MIXING_EXTRUDER is incompatible with LIN_ADVANCE."
   #endif
+#endif
+
+#if ENABLED(LIN_ADVANCE) && !IS_CARTESIAN
+  #error "Sorry! LIN_ADVANCE is only compatible with Cartesian."
 #endif
 
 /**
@@ -593,7 +622,7 @@ static_assert(1 >= 0
   #elif ENABLED(ENABLE_LEVELING_FADE_HEIGHT) && DISABLED(AUTO_BED_LEVELING_BILINEAR) && !UBL_SEGMENTED
     #error "ENABLE_LEVELING_FADE_HEIGHT on DELTA requires AUTO_BED_LEVELING_BILINEAR or AUTO_BED_LEVELING_UBL."
   #elif ENABLED(DELTA_AUTO_CALIBRATION) && !(HAS_BED_PROBE || ENABLED(ULTIPANEL))
-    #error "DELTA_AUTO_CALIBRATION requires either a probe or an LCD Controller."
+    #error "DELTA_AUTO_CALIBRATION requires a probe or LCD Controller."
   #elif ABL_GRID
     #if (GRID_MAX_POINTS_X & 1) == 0 || (GRID_MAX_POINTS_Y & 1) == 0
       #error "DELTA requires GRID_MAX_POINTS_X and GRID_MAX_POINTS_Y to be odd numbers."
@@ -890,8 +919,12 @@ static_assert(1 >= 0
 /**
  * Filament Width Sensor
  */
-#if ENABLED(FILAMENT_WIDTH_SENSOR) && !HAS_FILAMENT_WIDTH_SENSOR
-  #error "FILAMENT_WIDTH_SENSOR requires a FILWIDTH_PIN to be defined."
+#if ENABLED(FILAMENT_WIDTH_SENSOR)
+  #if !HAS_FILAMENT_WIDTH_SENSOR
+    #error "FILAMENT_WIDTH_SENSOR requires a FILWIDTH_PIN to be defined."
+  #elif ENABLED(NO_VOLUMETRICS)
+    #error "FILAMENT_WIDTH_SENSOR requires NO_VOLUMETRICS to be disabled."
+  #endif
 #endif
 
 /**
@@ -987,10 +1020,11 @@ static_assert(1 >= 0
   #error "TEMP_SENSOR_0 is required."
 #endif
 
-#if HOTENDS > 1 || ENABLED(HEATERS_PARALLEL)
-  #if !HAS_HEATER_1
-    #error "HEATER_1_PIN not defined for this board."
-  #endif
+// Pins are required for heaters
+#if ENABLED(HEATER_0_USES_MAX6675) && !(defined(MAX6675_SS) && MAX6675_SS >= 0)
+  #error "MAX6675_SS (required for TEMP_SENSOR_0) not defined for this board."
+#elif (HOTENDS > 1 || ENABLED(HEATERS_PARALLEL)) && !HAS_HEATER_1
+  #error "HEATER_1_PIN not defined for this board."
 #endif
 
 #if HOTENDS > 1
@@ -1273,6 +1307,7 @@ static_assert(1 >= 0
  *       REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER => REPRAP_DISCOUNT_SMART_CONTROLLER
  *       SAV_3DGLCD => U8GLIB_SH1106 => ULTIMAKERCONTROLLER
  *       MKS_12864OLED => U8GLIB_SH1106 => ULTIMAKERCONTROLLER
+ *       MKS_12864OLED_SSD1306 => U8GLIB_SSD1306 => ULTIMAKERCONTROLLER
  *       miniVIKI => ULTIMAKERCONTROLLER
  *       VIKI2 => ULTIMAKERCONTROLLER
  *       ELB_FULL_GRAPHIC_CONTROLLER => ULTIMAKERCONTROLLER
@@ -1285,14 +1320,16 @@ static_assert(1 >= 0
       && DISABLED(VIKI2) \
       && DISABLED(ELB_FULL_GRAPHIC_CONTROLLER) \
       && DISABLED(PANEL_ONE) \
-      && DISABLED(MKS_12864OLED)
+      && DISABLED(MKS_12864OLED) \
+      && DISABLED(MKS_12864OLED_SSD1306)
     + 1
   #endif
   #if ENABLED(REPRAP_DISCOUNT_SMART_CONTROLLER) \
       && DISABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER) \
       && DISABLED(LCD_FOR_MELZI) \
       && DISABLED(MAKEBOARD_MINI_2_LINE_DISPLAY_1602) \
-      && DISABLED(MKS_12864OLED)
+      && DISABLED(MKS_12864OLED) \
+      && DISABLED(MKS_12864OLED_SSD1306)
     + 1
   #endif
   #if ENABLED(REPRAP_DISCOUNT_FULL_GRAPHIC_SMART_CONTROLLER) \
@@ -1303,6 +1340,9 @@ static_assert(1 >= 0
     + 1
   #endif
   #if ENABLED(MKS_12864OLED)
+    + 1
+  #endif
+  #if ENABLED(MKS_12864OLED_SSD1306)
     + 1
   #endif
   #if ENABLED(MAKEBOARD_MINI_2_LINE_DISPLAY_1602)
@@ -1340,7 +1380,7 @@ static_assert(1 >= 0
   #endif
   #if ENABLED(REPRAPWORLD_KEYPAD) \
       && DISABLED(CARTESIO_UI) \
-      && DISABLED(ANET_KEYPAD_LCD)
+      && DISABLED(ZONESTAR_LCD)
     + 1
   #endif
   #if ENABLED(RIGIDBOT_PANEL)
@@ -1361,7 +1401,7 @@ static_assert(1 >= 0
   #if ENABLED(LCD_I2C_VIKI)
     + 1
   #endif
-  #if ENABLED(U8GLIB_SSD1306) && DISABLED(OLED_PANEL_TINYBOY2)
+  #if ENABLED(U8GLIB_SSD1306) && DISABLED(OLED_PANEL_TINYBOY2) && DISABLED(MKS_12864OLED_SSD1306)
     + 1
   #endif
   #if ENABLED(SAV_3DLCD)
@@ -1376,7 +1416,7 @@ static_assert(1 >= 0
   #if ENABLED(OLED_PANEL_TINYBOY2)
     + 1
   #endif
-  #if ENABLED(ANET_KEYPAD_LCD)
+  #if ENABLED(ZONESTAR_LCD)
     + 1
   #endif
   , "Please select no more than one LCD controller option."
@@ -1415,12 +1455,35 @@ static_assert(1 >= 0
       || ENABLED( E1_IS_TMC2130 ) \
       || ENABLED( E2_IS_TMC2130 ) \
       || ENABLED( E3_IS_TMC2130 ) \
-      || ENABLED( E4_IS_TMC2130 ) \
-  )
+      || ENABLED( E4_IS_TMC2130 ) )
     #error "HAVE_TMC2130 requires at least one TMC2130 stepper to be set."
   #elif ENABLED(HYBRID_THRESHOLD) && DISABLED(STEALTHCHOP)
     #error "Enable STEALTHCHOP to use HYBRID_THRESHOLD."
+  #elif defined(AUTOMATIC_CURRENT_CONTROL)
+    #error "AUTOMATIC_CURRENT_CONTROL is now MONITOR_DRIVER_STATUS. Please update your configuration."
   #endif
+#endif
+
+/**
+ * Make sure HAVE_TMC2208 is warranted
+ */
+
+#if ENABLED(HAVE_TMC2208) && !( \
+       ENABLED(  X_IS_TMC2208 ) \
+    || ENABLED( X2_IS_TMC2208 ) \
+    || ENABLED(  Y_IS_TMC2208 ) \
+    || ENABLED( Y2_IS_TMC2208 ) \
+    || ENABLED(  Z_IS_TMC2208 ) \
+    || ENABLED( Z2_IS_TMC2208 ) \
+    || ENABLED( E0_IS_TMC2208 ) \
+    || ENABLED( E1_IS_TMC2208 ) \
+    || ENABLED( E2_IS_TMC2208 ) \
+    || ENABLED( E3_IS_TMC2208 ) )
+  #error "HAVE_TMC2208 requires at least one TMC2208 stepper to be set."
+#endif
+
+#if ENABLED(HYBRID_THRESHOLD) && DISABLED(STEALTHCHOP)
+  #error "Enable STEALTHCHOP to use HYBRID_THRESHOLD."
 #endif
 
 /**
@@ -1551,3 +1614,5 @@ static_assert(COUNT(sanity_arr_3) <= XYZE_N, "DEFAULT_MAX_ACCELERATION has too m
     #endif
   #endif
 #endif
+
+#endif // _SANITYCHECK_H_

@@ -436,8 +436,8 @@ void Stepper::isr() {
     else {
       planner.discard_current_block();
       --cleaning_buffer_counter;                // Count down for abort print
-      #ifdef SD_FINISHED_RELEASECOMMAND
-        if (!cleaning_buffer_counter && (SD_FINISHED_STEPPERRELEASE)) enqueue_and_echo_commands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
+      #if ENABLED(SD_FINISHED_STEPPERRELEASE) && defined(SD_FINISHED_RELEASECOMMAND)
+        if (!cleaning_buffer_counter) enqueue_and_echo_commands_P(PSTR(SD_FINISHED_RELEASECOMMAND));
       #endif
     }
     current_block = NULL;                       // Prep to get a new block after cleaning
@@ -447,13 +447,10 @@ void Stepper::isr() {
   }
 
   // If there is no current block, attempt to pop one from the buffer
-  bool first_step = false;
   if (!current_block) {
     // Anything in the buffer?
     if ((current_block = planner.get_current_block())) {
       trapezoid_generator_reset();
-      TCNT1 = 0;  // make sure first pulse is not truncated
-      first_step = true;
 
       // Initialize Bresenham counters to 1/2 the ceiling
       counter_X = counter_Y = counter_Z = counter_E = -(current_block->step_event_count >> 1);
@@ -708,14 +705,8 @@ void Stepper::isr() {
   // Calculate new timer value
   if (step_events_completed <= (uint32_t)current_block->accelerate_until) {
 
-    if (first_step) {
-      acc_step_rate = current_block->initial_rate;
-      acceleration_time = 0;
-    }
-    else {
-      MultiU24X32toH16(acc_step_rate, acceleration_time, current_block->acceleration_rate);
-      acc_step_rate += current_block->initial_rate;
-    }
+    MultiU24X32toH16(acc_step_rate, acceleration_time, current_block->acceleration_rate);
+    acc_step_rate += current_block->initial_rate;
 
     // upper limit
     NOMORE(acc_step_rate, current_block->nominal_rate);
@@ -963,6 +954,16 @@ void Stepper::init() {
   // Init TMC2130 Steppers
   #if ENABLED(HAVE_TMC2130)
     tmc2130_init();
+  #endif
+
+  // Init TMC2208 Steppers
+  #if ENABLED(HAVE_TMC2208)
+    tmc2208_init();
+  #endif
+
+  // TRAMS, TMC2130 and TMC2208 advanced settings
+  #if HAS_TRINAMIC
+    TMC_ADV()
   #endif
 
   // Init L6470 Steppers
